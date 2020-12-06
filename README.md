@@ -24,7 +24,7 @@ For the paper and other details of DeepMVS or the MYS-Synth Dataset, please see 
 
 ### Requirements
 
-- **python 2.7**
+- **python 2.7 / python 3.7 (python 3.8 has compatibility issues with Cuda 11.0)**
 - **numpy 1.13.1**
 - **pytorch 0.3.0** and **torchvision**: Follow the instructions from [their website](http://pytorch.org/).
 - **opencv 3.1.0**: Run ``conda install -c menpo opencv`` or ``pip install opencv-python``.

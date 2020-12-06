@@ -14,11 +14,17 @@ def generate_volume_train(shared_data, max_num_neighbors, num_depths, patch_heig
 	ready_e = shared_data["ready_e"]
 	start_e = shared_data["start_e"]
 	DATASET_LIST = ([
-		"GTAV_540", "GTAV_720",
+		#"GTAV_540", 
+                "GTAV_720",
 		"mvs_achteck_turm", "mvs_breisach", "mvs_citywall", 
 		"rgbd_10_to_20_3d_train", "rgbd_10_to_20_handheld_train", "rgbd_10_to_20_simple_train", "rgbd_20_to_inf_3d_train", "rgbd_20_to_inf_handheld_train", "rgbd_20_to_inf_simple_train",
-		"scenes11_train", 
-		"sun3d_train_0.01m_to_0.1m", "sun3d_train_0.1m_to_0.2m", "sun3d_train_0.2m_to_0.4m", "sun3d_train_0.4m_to_0.8m", "sun3d_train_0.8m_to_1.6m", "sun3d_train_1.6m_to_infm"
+		#"scenes11_train", 
+		"sun3d_train_0.01m_to_0.1m", 
+	        #"sun3d_train_0.1m_to_0.2m", 
+                "sun3d_train_0.2m_to_0.4m", 
+	        #"sun3d_train_0.4m_to_0.8m", 
+		"sun3d_train_0.8m_to_1.6m" 
+		#"sun3d_train_1.6m_to_infm"
 	])
 	if dataset_path is None:
 		DATASET_DIR_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "dataset", "train")

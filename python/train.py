@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 import threading
+import tensorflow
 
 import numpy as np
 import torch
@@ -50,15 +51,23 @@ batch_size = 1
 dataset_downloaded = True
 if os.path.exists(dataset_path):
 	DATASET_LIST = ([
-			"GTAV_540", "GTAV_720",
+			#"GTAV_540", 
+			"GTAV_720",
 			"mvs_achteck_turm", "mvs_breisach", "mvs_citywall", 
 			"rgbd_10_to_20_3d_train", "rgbd_10_to_20_handheld_train", "rgbd_10_to_20_simple_train", "rgbd_20_to_inf_3d_train", "rgbd_20_to_inf_handheld_train", "rgbd_20_to_inf_simple_train",
-			"scenes11_train", 
-			"sun3d_train_0.01m_to_0.1m", "sun3d_train_0.1m_to_0.2m", "sun3d_train_0.2m_to_0.4m", "sun3d_train_0.4m_to_0.8m", "sun3d_train_0.8m_to_1.6m", "sun3d_train_1.6m_to_infm"
+			#"scenes11_train", 
+			"sun3d_train_0.01m_to_0.1m", 
+                        #"sun3d_train_0.1m_to_0.2m", 
+                        "sun3d_train_0.2m_to_0.4m", 
+                        #"sun3d_train_0.4m_to_0.8m", 
+                        "sun3d_train_0.8m_to_1.6m" 
+                        #"sun3d_train_1.6m_to_infm"
 		])
 	for dataset in DATASET_LIST:
 		if not os.path.exists(os.path.join(dataset_path, dataset)):
-			print >> log_file, "Cannot find dataset '{:}'".format(dataset)
+			#print >> log_file, "Cannot find dataset '{:}'".format(dataset)
+			print ('Cannot find dataset {:}'.format(dataset))
+		        # print ('Converting {:}.h5 ...'.format(dataset_name))
 			dataset_downloaded = False
 			break
 else:
@@ -67,8 +76,10 @@ else:
 
 # Try downloading training datasets if it has not been done.
 if not dataset_downloaded:
-	print >> log_file, "Training datasets must be downloaded before training DeepMVS."
-	print >> log_file, "Run 'python python/download_training_datasets.py' to download the training datasets."
+	# print >> log_file, "Training datasets must be downloaded before training DeepMVS."
+	#print >> log_file, "Run 'python python/download_training_datasets.py' to download the training datasets."
+	print ("Training datasets must be downloaded before training DeepMVS.")
+	print ( "Run 'python python/download_training_datasets.py' to download the training datasets.")
 	sys.exit()
 
 # Create model directory and log file.
@@ -130,7 +141,9 @@ def train_DeepMVS_PT():
 	data_gt = torch.LongTensor(batch_size, patch_height, patch_width)
 	invalid_mask = torch.ByteTensor(batch_size, patch_height, patch_width)
 	thread_idx = 0
-	print >> log_file, "Start training DeepMVS_PT from iteration {:d}.".format(iteration_start)
+	# print >> log_file, "Start training DeepMVS_PT from iteration {:d}.".format(iteration_start)
+	# print ("Start training DeepMVS_PT from iteration {:d}.".format(iteration_start))
+	print ("Start training DeepMVS_PT" )
 	for iteration_idx in range(iteration_start, iteration_stop):
 		# Load a plane-sweep volume.
 		while not shared_datas[thread_idx]["ready_e"].wait(1e-3):
@@ -160,7 +173,8 @@ def train_DeepMVS_PT():
 		predict = model.forward(data_in_var)
 		loss = model.layer_loss(predict, data_gt_var)
 		loss.backward()
-		nn.utils.clip_grad_norm(model.parameters(), grad_clip)
+		#nn.utils.clip_grad_norm(model.parameters(), grad_clip)
+		nn.utils.clip_grad_norm_(model.parameters(), grad_clip) # @Tuan
 		optimizer.step()
 		# Save snapshot if needed.
 		if snapshot_period != 0:
@@ -168,7 +182,8 @@ def train_DeepMVS_PT():
 				torch.save(model.state_dict(), os.path.join(model_path, "DeepMVS_PT_snapshot_{:d}.model".format(iteration_idx + 1)))
 				torch.save(optimizer.state_dict(), os.path.join(model_path, "DeepMVS_PT_snapshot_{:d}.optimizer".format(iteration_idx + 1)))
 		# Print loss to log file.
-		print >> log_file, "Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0])
+		#print >> log_file, "Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0]) # @Tuan
+		#print ("Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0]))
 		log_file.flush()
 	# Save final trained model.
 	torch.save(model.state_dict(), os.path.join(model_path, "DeepMVS_PT_final.model"))
@@ -287,5 +302,8 @@ for i in range(0, num_threads):
 	shared_datas[i]["stop"] = True
 	shared_datas[i]["start_e"].set()
 # Finished.
-print >> log_file, "Finished training DeepMVS."
-print >> log_file, "Trained model can be found at {:}".format(os.path.join(model_path, "DeepMVS_final.model"))
+#print >> log_file, "Finished training DeepMVS."
+#print >> log_file, "Trained model can be found at {:}".format(os.path.join(model_path, "DeepMVS_final.model"))
+
+print ("Finished training DeepMVS.")
+print ("Trained model can be found at {:}".format(os.path.join(model_path, "DeepMVS_final.model")))

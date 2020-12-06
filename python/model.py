@@ -251,5 +251,5 @@ class DeepMVS(nn.Module):
 
 def weights_init(m):
 	if isinstance(m, nn.Conv2d):
-		nn.init.xavier_normal(m.weight.data)
+		nn.init.xavier_normal_(m.weight.data)
 		m.bias.data.fill_(0)
