@@ -84,18 +84,19 @@ if not os.path.exists(model_path):
 	raise ValueError("Cannot find the trained model. Please download it first or specify the path to the model.")
 
 # Load trained model.
-print >> log_file, "Loading the trained model..."
+print ("Loading the trained model...")
 log_file.flush()
 model = DeepMVS(num_depths, use_gpu)
 model.load_state_dict(torch.load(os.path.join(model_path)))
-print >> log_file, "Successfully loaded the trained model."
+print ("Successfully loaded the trained model.")
 log_file.flush()
 
 # Load COLMAP sparse model.
-print >> log_file, "Loading the sparse model..."
+print ( "Loading the sparse model...")
 log_file.flush()
+print ("image_width =", image_width, ", image_height = ", image_height)
 sparse_model = ColmapSparse(sparse_path, image_path, image_width, image_height)
-print >> log_file, "Successfully loaded the sparse model."
+print ("Successfully loaded the sparse model.")
 log_file.flush()
 
 # Launch plane-sweep volume generating thread.
@@ -113,25 +114,29 @@ worker_thread = threading.Thread(name = "generate_volume", target = generate_vol
 worker_thread.start()
 
 # Prepare VGG model and normalizer.
-print >> log_file, "Creating VGG model..."
+print ( "Creating VGG model...")
 log_file.flush()
 if use_gpu:
 	VGG_model = vision.models.vgg19(pretrained = True).cuda()
+	print ("Using GPU for testing")
 else:
 	VGG_model = vision.models.vgg19(pretrained = True)
+	print ("Not using GPU for testing")
 VGG_normalize = vision.transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
-print >> log_file, "Successfully created VGG model."
+print ("Successfully created VGG model.")
 log_file.flush()
 
 # Loop through all images.
 for (ref_image_idx, ref_image) in enumerate(sparse_model.image_list.images):
 	# Check if output already exists.
 	if not overwrite and os.path.exists(os.path.join(output_path, "{:}.output.npy".format(ref_image.filename))):
-		print >> log_file, "Skipped {:} since the output already exists.".format(ref_image.filename)
+		#print >> log_file, "Skipped {:} since the output already exists.".format(ref_image.filename)
+		print ("Skipped ",ref_image.filename," since the output already exists.")
 		log_file.flush()
 		continue
 	# Start generating plane-sweep volume of the first patch.
-	print >> log_file, "Start working on image {:d}/{:d}.".format(ref_image_idx, sparse_model.image_list.length)
+	#print >> log_file, "Start working on image {:d}/{:d}.".format(ref_image_idx, sparse_model.image_list.length)
+	print ("Start working on image ", ref_image_idx, "/", sparse_model.image_list.length) 
 	log_file.flush()
 	shared_data["image_idx"] = ref_image_idx
 	shared_data["target_x"] = 0
@@ -183,11 +188,14 @@ for (ref_image_idx, ref_image) in enumerate(sparse_model.image_list.images):
 	predict_raw = torch.zeros(num_depths, image_height, image_width)
 	border_x = (patch_width - stride_width) / 2
 	border_y = (patch_height - stride_height) / 2
-	col_total = (image_width - 2 * border_x - 1) / stride_width + 1
-	row_total = (image_height - 2 * border_y - 1) / stride_height + 1
+	#col_total = (image_width - 2 * border_x - 1) / stride_width + 1
+	col_total = int ((image_width - 2 * border_x - 1) / stride_width + 1 ) # @Tuan
+	#row_total = (image_height - 2 * border_y - 1) / stride_height + 1
+	row_total = int ((image_height - 2 * border_y - 1) / stride_height + 1 ) # @Tuan
 	for row_idx in range(0, row_total):
 		for col_idx in range(0, col_total):
-			print >> log_file, "Working on patch at row = {:d}/{:d} col = {:d}/{:d}".format(row_idx, row_total, col_idx, col_total)
+			#print >> log_file, "Working on patch at row = {:d}/{:d} col = {:d}/{:d}".format(row_idx, row_total, col_idx, col_total)
+			print ("Working on patch at row = ",row_idx, "/", row_total,"|", col_idx,"/", col_total)
 			log_file.flush()
 			# Compute patch location for this patch and next patch.
 			if col_idx != col_total - 1:
@@ -222,12 +230,21 @@ for (ref_image_idx, ref_image) in enumerate(sparse_model.image_list.images):
 			data_in_tensor = torch.FloatTensor(batch_size, 1, num_depths, 2, 3, patch_height, patch_width)
 			ref_img_tensor = torch.FloatTensor(ref_img).permute(2, 0, 1).unsqueeze(0)
 			data_in_tensor[0, 0, :, 0, ...] = ref_img_tensor.expand(num_depths, -1, -1, -1)
-			feature_input_1x = Variable(feature_input_1x_whole[... , start_y:start_y + patch_height, start_x:start_x + patch_width], volatile = True)
-			feature_input_2x = Variable(feature_input_2x_whole[... , start_y / 2:start_y / 2 + patch_height / 2, start_x / 2:start_x / 2 + patch_width / 2], volatile = True)
-			feature_input_4x = Variable(feature_input_4x_whole[... , start_y / 4:start_y / 4 + patch_height / 4, start_x / 4:start_x / 4 + patch_width / 4], volatile = True)
-			feature_input_8x = Variable(feature_input_8x_whole[... , start_y / 8:start_y / 8 + patch_height / 8, start_x / 8:start_x / 8 + patch_width / 8], volatile = True)
-			feature_input_16x = Variable(feature_input_16x_whole[... , start_y / 16:start_y / 16 + patch_height / 16, start_x / 16:start_x / 16 + patch_width / 16], volatile = True)
+			#feature_input_1x = Variable(feature_input_1x_whole[... , start_y:start_y + patch_height, start_x:start_x + patch_width], volatile = True)
+			#feature_input_2x = Variable(feature_input_2x_whole[... , start_y / 2:start_y / 2 + patch_height / 2, start_x / 2:start_x / 2 + patch_width / 2], volatile = True)
+			#feature_input_4x = Variable(feature_input_4x_whole[... , start_y / 4:start_y / 4 + patch_height / 4, start_x / 4:start_x / 4 + patch_width / 4], volatile = True)
+			#feature_input_8x = Variable(feature_input_8x_whole[... , start_y / 8:start_y / 8 + patch_height / 8, start_x / 8:start_x / 8 + patch_width / 8], volatile = True)
+			#feature_input_16x = Variable(feature_input_16x_whole[... , start_y / 16:start_y / 16 + patch_height / 16, start_x / 16:start_x / 16 + patch_width / 16], volatile = True)
+
+			# Mods by @Tuan
+			feature_input_1x = Variable(feature_input_1x_whole[... , int(start_y):int(start_y + patch_height), int(start_x):int(start_x + patch_width)], volatile = True)
+			feature_input_2x = Variable(feature_input_2x_whole[... , int(start_y / 2):int(start_y / 2 + patch_height / 2), int(start_x / 2):int(start_x / 2 + patch_width / 2)], volatile = True)
+			feature_input_4x = Variable(feature_input_4x_whole[... , int(start_y / 4):int(start_y / 4 + patch_height / 4), int(start_x / 4):int(start_x / 4 + patch_width / 4)], volatile = True)
+			feature_input_8x = Variable(feature_input_8x_whole[... , int(start_y / 8):int(start_y / 8 + patch_height / 8), int(start_x / 8):int(start_x / 8 + patch_width / 8)], volatile = True)
+			feature_input_16x = Variable(feature_input_16x_whole[... , int(start_y / 16):int(start_y / 16 + patch_height / 16), int(start_x / 16):int(start_x / 16 + patch_width / 16)], volatile = True)
+	
 			if use_gpu:
+				print("Using GPU for features")
 				feature_input_1x = feature_input_1x.cuda()
 				feature_input_2x = feature_input_2x.cuda()
 				feature_input_4x = feature_input_4x.cuda()
@@ -265,9 +282,11 @@ for (ref_image_idx, ref_image) in enumerate(sparse_model.image_list.images):
 				copy_y_start = border_y + row_idx * stride_height
 				copy_y_end = copy_y_start + stride_height
 			# Copy the prediction to buffer.
-			predict_raw[..., copy_y_start:copy_y_end, copy_x_start:copy_x_end] = predict.data[0, :, copy_y_start - start_y:copy_y_end - start_y, copy_x_start - start_x:copy_x_end - start_x]
+			#predict_raw[..., copy_y_start:copy_y_end, copy_x_start:copy_x_end] = predict.data[0, :, copy_y_start - start_y:copy_y_end - start_y, copy_x_start - start_x:copy_x_end - start_x]
+			# Mod by @Tuan
+			predict_raw[..., int(copy_y_start):int(copy_y_end), int(copy_x_start):int(copy_x_end)] = predict.data[0, :, int(copy_y_start - start_y):int(copy_y_end - start_y), int(copy_x_start - start_x):int(copy_x_end - start_x)]
 	# Pass through DenseCRF.
-	print >> log_file, "Running DenseCRF..."
+	print ("Running DenseCRF...")
 	log_file.flush()
 	unary_energy = F.log_softmax(Variable(predict_raw, volatile = True), dim = 0).data.numpy()
 	crf = dcrf.DenseCRF2D(image_width, image_height, num_depths)
@@ -283,7 +302,8 @@ for (ref_image_idx, ref_image) in enumerate(sparse_model.image_list.images):
 		os.makedirs(output_dir)
 	np.save(os.path.join(output_path, "{:}.output.npy".format(ref_image.filename)), new_predict)
 	imageio.imwrite(os.path.join(output_path, "{:}.output.png".format(ref_image.filename)), (new_predict / ref_image.estimated_max_disparity).clip(0.0, 1.0))
-	print >> log_file, "Result has been saved to {:}.".format(os.path.join(output_path, "{:}.output.npy".format(ref_image.filename)))
+	#print >> log_file, "Result has been saved to {:}.".format(os.path.join(output_path, "{:}.output.npy".format(ref_image.filename)))
+	print ("Result has been saved to {:}.".format(os.path.join(output_path, "{:}.output.npy".format(ref_image.filename))))
 	log_file.flush()
 
 # Terminate worker threads.
@@ -291,5 +311,5 @@ shared_data["stop"] = True
 shared_data["start_e"].set()
 
 # Finished.
-print >> log_file, "Finished running DeepMVS."
-print >> log_file, "Results can be found in {:}".format(output_path)
+print ("Finished running DeepMVS.")
+print ( "Results can be found in ",output_path)

@@ -107,7 +107,8 @@ for i in range(0, num_threads):
 	shared_datas[i]["start_e"].set()
 
 # Check if we can resume from last snapshot.
-iteration_stop = 320000
+#iteration_stop = 320000
+iteration_stop = 100000 
 if retrain:
 	need_pretrain = True
 	iteration_start = 0
@@ -141,9 +142,9 @@ def train_DeepMVS_PT():
 	data_gt = torch.LongTensor(batch_size, patch_height, patch_width)
 	invalid_mask = torch.ByteTensor(batch_size, patch_height, patch_width)
 	thread_idx = 0
-	# print >> log_file, "Start training DeepMVS_PT from iteration {:d}.".format(iteration_start)
-	# print ("Start training DeepMVS_PT from iteration {:d}.".format(iteration_start))
-	print ("Start training DeepMVS_PT" )
+	#print >> log_file, "Start training DeepMVS_PT from iteration {:d}.".format(iteration_start)
+	#print ("Start training DeepMVS_PT from iteration {:d}.".format(iteration_start),log_file)
+	print ("Start training DeepMVS_PT from ", iteration_start)#.format(iteration_start)
 	for iteration_idx in range(iteration_start, iteration_stop):
 		# Load a plane-sweep volume.
 		while not shared_datas[thread_idx]["ready_e"].wait(1e-3):
@@ -183,6 +184,7 @@ def train_DeepMVS_PT():
 				torch.save(optimizer.state_dict(), os.path.join(model_path, "DeepMVS_PT_snapshot_{:d}.optimizer".format(iteration_idx + 1)))
 		# Print loss to log file.
 		#print >> log_file, "Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0]) # @Tuan
+		print ("DeepMVS_PT : Iteration ", iteration_idx, "/", iteration_stop ) #, ", loss = ", loss.data[0]) # @Tuan
 		#print ("Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0]))
 		log_file.flush()
 	# Save final trained model.
@@ -193,7 +195,8 @@ if need_pretrain:
 	train_DeepMVS_PT()
 
 # Check if we can resume from last snapshot.
-iteration_stop = 320000
+#iteration_stop = 320000
+iteration_stop = 100000 
 if retrain or snapshot_period == 0:
 	iteration_start = 0
 else:
@@ -226,8 +229,10 @@ def train_DeepMVS():
 	data_gt = torch.LongTensor(batch_size, patch_height, patch_width)
 	invalid_mask = torch.ByteTensor(batch_size, patch_height, patch_width)
 	thread_idx = 0
-	print >> log_file, "Start training DeepMVS from iteration {:d}.".format(iteration_start)
+	# print >> log_file, "Start training DeepMVS from iteration {:d}.".format(iteration_start)
+	print ("Start training DeepMVS from iteration_start:",iteration_start)
 	for iteration_idx in range(iteration_start, iteration_stop):
+		print ("Training DeepMVS :",iteration_idx, "/", iteration_stop)
 		# Load a plane-sweep volume.
 		while not shared_datas[thread_idx]["ready_e"].wait(1e-3):
 			thread_idx = (thread_idx + 1) % num_threads
@@ -258,24 +263,38 @@ def train_DeepMVS():
 		# Compute VGG Features.
 		VGG_scaling_factor = 0.01
 		if use_gpu:
-			VGG_temp_var = Variable(VGG_normalize(torch.FloatTensor(ref_img_full)).permute(2, 0, 1).unsqueeze(0), volatile = True).cuda()
+			#VGG_temp_var = Variable(VGG_normalize(torch.FloatTensor(ref_img_full)).permute(2, 0, 1).unsqueeze(0), volatile = True).cuda()
+			# IMPORTANT CHANGE @Tuan
+			VGG_temp_var = Variable(VGG_normalize(torch.FloatTensor(ref_img_full).permute(2, 0, 1)).unsqueeze(0), volatile = True).cuda() # @Tuan
+			print("VGG_temp_var.data :", VGG_temp_var.data)			
 		else:
-			VGG_temp_var = Variable(VGG_normalize(torch.FloatTensor(ref_img_full)).permute(2, 0, 1).unsqueeze(0), volatile = True)
+			#VGG_temp_var = Variable(VGG_normalize(torch.FloatTensor(ref_img_full)).permute(2, 0, 1).unsqueeze(0), volatile = True)
+			# IMPORTANT CHANGE @Tuan
+			VGG_temp_var = Variable(VGG_normalize(torch.FloatTensor(ref_img_full).permute(2, 0, 1)).unsqueeze(0), volatile = True)
 		for i in range(0, 4): # conv_1_2
 			VGG_temp_var = VGG_model.features[i].forward(VGG_temp_var)
 		feature_input_1x = Variable(VGG_temp_var.data[... , target_y:target_y + patch_height, target_x:target_x + patch_width].clone() * VGG_scaling_factor, requires_grad = True)
 		for i in range(4, 9): # conv_2_2
 			VGG_temp_var = VGG_model.features[i].forward(VGG_temp_var)
-		feature_input_2x = Variable(VGG_temp_var.data[... , target_y / 2:target_y / 2 + patch_height / 2, target_x / 2:target_x / 2 + patch_width / 2].clone() * VGG_scaling_factor, requires_grad = True)
+		print("target_x :", target_x)
+		print("target_y :", target_y)
+		print("patch_height:", patch_height)
+		print("patch_width:", patch_width)
+		print("VGG_scaling_factor:", VGG_scaling_factor)
+		#feature_input_2x = Variable(VGG_temp_var.data[... , target_y / 2:target_y / 2 + patch_height / 2, target_x / 2:target_x / 2 + patch_width / 2].clone() * VGG_scaling_factor, requires_grad = True)
+		feature_input_2x = Variable(VGG_temp_var.data[... , int(target_y / 2):int(target_y / 2) + int(patch_height / 2), int(target_x / 2):int(target_x / 2) + int(patch_width / 2)].clone() * VGG_scaling_factor, requires_grad = True) # @Tuan
 		for i in range(9, 14): # conv_3_2
 			VGG_temp_var = VGG_model.features[i].forward(VGG_temp_var)
-		feature_input_4x = Variable(VGG_temp_var.data[... , target_y / 4:target_y / 4 + patch_height / 4, target_x / 4:target_x / 4 + patch_width / 4].clone() * VGG_scaling_factor, requires_grad = True)
+		#feature_input_4x = Variable(VGG_temp_var.data[... , target_y / 4:target_y / 4 + patch_height / 4, target_x / 4:target_x / 4 + patch_width / 4].clone() * VGG_scaling_factor, requires_grad = True)
+		feature_input_4x = Variable(VGG_temp_var.data[... , int(target_y / 4):int(target_y / 4) + int(patch_height / 4), int(target_x / 4):int(target_x / 4) + int(patch_width / 4)].clone() * VGG_scaling_factor, requires_grad = True) # @Tuan
 		for i in range(14, 23): # conv_4_2
 			VGG_temp_var = VGG_model.features[i].forward(VGG_temp_var)
-		feature_input_8x = Variable(VGG_temp_var.data[... , target_y / 8:target_y / 8 + patch_height / 8, target_x / 8:target_x / 8 + patch_width / 8].clone() * VGG_scaling_factor, requires_grad = True)
+		#feature_input_8x = Variable(VGG_temp_var.data[... , target_y / 8:target_y / 8 + patch_height / 8, target_x / 8:target_x / 8 + patch_width / 8].clone() * VGG_scaling_factor, requires_grad = True)
+		feature_input_8x = Variable(VGG_temp_var.data[... , int(target_y / 8):int(target_y / 8) + int(patch_height / 8), int(target_x / 8):int(target_x / 8) + int(patch_width / 8)].clone() * VGG_scaling_factor, requires_grad = True) # @Tuan
 		for i in range(23, 32): # conv_5_2
 			VGG_temp_var = VGG_model.features[i].forward(VGG_temp_var)
-		feature_input_16x = Variable(VGG_temp_var.data[... , target_y / 16:target_y / 16 + patch_height / 16, target_x / 16:target_x / 16 + patch_width / 16].clone() * VGG_scaling_factor, requires_grad = True)
+		#feature_input_16x = Variable(VGG_temp_var.data[... , target_y / 16:target_y / 16 + patch_height / 16, target_x / 16:target_x / 16 + patch_width / 16].clone() * VGG_scaling_factor, requires_grad = True)
+		feature_input_16x = Variable(VGG_temp_var.data[... , int(target_y / 16):int(target_y / 16) + int(patch_height / 16), int(target_x / 16):int(target_x / 16) + int(patch_width / 16)].clone() * VGG_scaling_factor, requires_grad = True)
 		del VGG_temp_var
 		# Update parameters.
 		predict = model.forward(data_in_var, [feature_input_1x, feature_input_2x, feature_input_4x, feature_input_8x, feature_input_16x])
@@ -289,7 +308,8 @@ def train_DeepMVS():
 				torch.save(model.state_dict(), os.path.join(model_path, "DeepMVS_snapshot_{:d}.model".format(iteration_idx + 1)))
 				torch.save(optimizer.state_dict(), os.path.join(model_path, "DeepMVS_snapshot_{:d}.optimizer".format(iteration_idx + 1)))
 		# Print loss to log file.
-		print >> log_file, "Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0])
+		# print >> log_file, "Iter {:d}: loss = {:.6e}".format(iteration_idx, loss.data[0])
+		print (" train_DeepMVS : Iteration: ", iteration_idx, "/", iteration_stop )
 		log_file.flush()
 	# Save final trained model.
 	torch.save(model.state_dict(), os.path.join(model_path, "DeepMVS_final.model"))
