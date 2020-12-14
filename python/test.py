@@ -252,6 +252,7 @@ for (ref_image_idx, ref_image) in enumerate(sparse_model.image_list.images):
 				feature_input_16x = feature_input_16x.cuda()
 			# Loop through all neighbor images.
 			for neighbor_idx in range(0, num_neighbors):
+				print ( 'row_idx=', row_idx, 'col_idx=',col_idx,', neighbor_idx', neighbor_idx, "/", num_neighbors)	
 				data_in_tensor[0, 0, :, 1, ...] = torch.FloatTensor(np.moveaxis(sweep_volume[neighbor_idx, ...], -1, -3))
 				data_in = Variable(data_in_tensor, volatile = True)
 				if use_gpu:

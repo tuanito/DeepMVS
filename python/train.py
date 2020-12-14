@@ -108,7 +108,7 @@ for i in range(0, num_threads):
 
 # Check if we can resume from last snapshot.
 #iteration_stop = 320000
-iteration_stop = 100000 
+iteration_stop = 320000 
 if retrain:
 	need_pretrain = True
 	iteration_start = 0
@@ -196,7 +196,7 @@ if need_pretrain:
 
 # Check if we can resume from last snapshot.
 #iteration_stop = 320000
-iteration_stop = 100000 
+iteration_stop = 320000 
 if retrain or snapshot_period == 0:
 	iteration_start = 0
 else:

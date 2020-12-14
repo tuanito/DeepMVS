@@ -11,10 +11,11 @@ def generate_volume_test(shared_data):
 	# Get event handles.
 	ready_e = shared_data["ready_e"]
 	start_e = shared_data["start_e"]
-	# Read paramters.
+	# Read parameters.
 	patch_width = shared_data["patch_width"]
 	patch_height = shared_data["patch_height"]
 	num_depths = shared_data["num_depths"]
+ 	# This seems to not be used anywhere. The number of neighbors seems to be embedded in sparse_model @Tuan
 	max_num_neighbors = shared_data["max_num_neighbors"]
 	sparse_model = shared_data["sparse_model"]
 	# Continue generate pland sweep volume.
@@ -42,6 +43,8 @@ def generate_volume_test(shared_data):
 		y_map = np.zeros((patch_height, patch_width), dtype = np.float32)
 		coord_buffer = np.zeros((patch_height, patch_width, 4), dtype = np.float32)
 		# Loop through neighbor images.
+		# Code review : maybe here it is possible to increase the speed of the algorithm
+		# by decreasing the number of neighbor_list. @Tuan
 		n_idx = 0
 		for n_image_idx in neighbor_list:
 			# Load the neighbor image.
